@@ -14,7 +14,7 @@ const logger = moduleLogger("weekRepository");
 export const find = async (opts?: FindManyOptions<Week>): Promise<Week[]> => {
   logger.info("Find");
   const repository = getRepository(Week);
-  const data = await repository.find(opts);
+  const data = await repository.createQueryBuilder("week").leftJoinAndSelect("week.shifts", "shifts").getMany();
   return data;
 }
 

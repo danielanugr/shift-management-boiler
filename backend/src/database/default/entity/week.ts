@@ -28,5 +28,5 @@ export default class Week extends BaseTimestamp {
   })
   status: WeekStatus;
 
-  @OneToMany((type) => Shift, (shift) => shift.week) shifts: Shift[];
+  @OneToMany(() => Shift, (shift) => shift.week) shifts: Shift[];
 }

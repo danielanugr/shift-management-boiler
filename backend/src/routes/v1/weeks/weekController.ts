@@ -13,7 +13,7 @@ export const find = async (req: Request, h: ResponseToolkit) => {
     const data = await weekUsecase.find(filter);
     const res: ISuccessResponse = {
       statusCode: 200,
-      message: "Get shift successful",
+      message: "Get week successful",
       results: data,
     };
     return res;
