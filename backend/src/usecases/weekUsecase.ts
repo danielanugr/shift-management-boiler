@@ -1,8 +1,9 @@
 import * as weekRepository from "../database/default/repository/weekRepository";
 import { FindConditions, FindManyOptions, FindOneOptions } from "typeorm";
 import Week from "../database/default/entity/week";
-import { ICreateWeek } from "../shared/interfaces";
+import { ICreateWeek, WeekStatus } from "../shared/interfaces";
 import moment from "moment";
+import { HttpError } from "../shared/classes/HttpError";
 
 export const find = async (opts: FindManyOptions<Week>): Promise<Week[]> => {
   return weekRepository.find(opts);
@@ -29,6 +30,16 @@ export const create = async (payload: ICreateWeek): Promise<Week> => {
   week.endDate = payload.endDate;
 
   return weekRepository.create(week);
+};
+
+export const publishWeek = async (id: string) => {
+  const week = await findById(id);
+  if (!week) {
+    throw new HttpError(404, "Week not found");
+  }
+
+  week.status = WeekStatus.PUBLISHED;
+  return await weekRepository.updateById(id, week);
 };
 
 export const getWeekRange = (date: string) => {
