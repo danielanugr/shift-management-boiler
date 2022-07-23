@@ -14,9 +14,12 @@ const logger = moduleLogger("weekRepository");
 export const find = async (opts?: FindManyOptions<Week>): Promise<Week[]> => {
   logger.info("Find");
   const repository = getRepository(Week);
-  const data = await repository.createQueryBuilder("week").leftJoinAndSelect("week.shifts", "shifts").getMany();
+  const data = await repository
+    .createQueryBuilder("week")
+    .leftJoinAndSelect("week.shifts", "shifts")
+    .getMany();
   return data;
-}
+};
 
 export const findById = async (
   id: string,
@@ -24,9 +27,13 @@ export const findById = async (
 ): Promise<Week> => {
   logger.info("Find by id");
   const repository = getRepository(Week);
-  const data = await repository.findOne(id, opts);
+  const data = await repository
+    .createQueryBuilder("week")
+    .leftJoinAndSelect("week.shifts", "shifts")
+    .where("week.id = :id", { id: id })
+    .getOne();
   return data;
-}
+};
 
 export const findOne = async (
   where?: FindConditions<Week>,
