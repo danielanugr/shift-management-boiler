@@ -28,7 +28,7 @@ export default class Shift extends BaseTimestamp {
   @Column({
     type: 'enum',
     enum: ShiftStatus,
-    default: ShiftStatus.draft,
+    default: ShiftStatus.DRAFT,
   })
   status: ShiftStatus;
 }

@@ -14,6 +14,6 @@ export interface IUpdateShift {
 }
 
 export enum ShiftStatus {
-  draft = "draft",
-  published = "published"
+  DRAFT = "draft",
+  PUBLISHED = "published"
 }
