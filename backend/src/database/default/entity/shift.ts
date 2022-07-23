@@ -1,6 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { BaseTimestamp } from "./baseTimestamp";
-import { ShiftStatus } from "../../../shared/interfaces";
+import Week from "./week";
 
 @Entity()
 export default class Shift extends BaseTimestamp {
@@ -25,10 +25,5 @@ export default class Shift extends BaseTimestamp {
   })
   endTime: string;
 
-  @Column({
-    type: 'enum',
-    enum: ShiftStatus,
-    default: ShiftStatus.DRAFT,
-  })
-  status: ShiftStatus;
+  @ManyToOne(type => Week, week => week.shifts) week: Week
 }

@@ -1,8 +1,11 @@
 import * as shiftRepository from "../database/default/repository/shiftRepository";
 import { FindManyOptions, FindOneOptions } from "typeorm";
 import Shift from "../database/default/entity/shift";
-import { ICreateShift, IUpdateShift, ShiftStatus } from "../shared/interfaces";
+import { ICreateShift, IUpdateShift, WeekStatus} from "../shared/interfaces";
 import { HttpError } from "../shared/classes/HttpError";
+import * as weekUsecase from "./weekUsecase"
+import moment from "moment";
+import Week from "../database/default/entity/week";
 
 export const find = async (opts: FindManyOptions<Shift>): Promise<Shift[]> => {
   return shiftRepository.find(opts);
@@ -22,11 +25,31 @@ export const create = async (payload: ICreateShift): Promise<Shift> => {
     throw new HttpError(400, "Shift is overlapping");
   }
 
+  const weekNo = moment(payload.date, 'DD-MM-YYYY').isoWeek()
+  let week: Week = await weekUsecase.findOne({
+    week: weekNo
+  })
+
+  if(!week) {
+    let [startDate, endDate] = weekUsecase.getWeekRange(payload.date);
+    week = new Week();
+    week.startDate = startDate;
+    week.endDate = endDate;
+    week.week = weekNo;
+
+    week = await weekUsecase.create(week);
+  }
+
+  if (week.status === WeekStatus.PUBLISHED){
+    throw new HttpError(400, 'Cannot create shift in published week')
+  }
+
   const shift = new Shift();
   shift.name = payload.name;
   shift.date = payload.date;
   shift.startTime = payload.startTime;
   shift.endTime = payload.endTime;
+  shift.week = week;
 
   return shiftRepository.create(shift);
 };
@@ -41,9 +64,9 @@ export const updateById = async (
     throw new HttpError(404, "Shift not found")
   }
 
-  if (shift.status === ShiftStatus.PUBLISHED) {
-    throw new HttpError(400, "Published shift cannot be updated");
-  }
+  // if (shift.status === ShiftStatus.PUBLISHED) {
+  //   throw new HttpError(400, "Published shift cannot be updated");
+  // }
 
   let isOverlapping = await checkOverlappingShift(shift);
 
@@ -64,16 +87,16 @@ export const deleteById = async (id: string | string[]) => {
       throw new HttpError(400, "Shift not found")
     }
 
-    if (shift.status === ShiftStatus.PUBLISHED) {
-      throw new HttpError(400, "Published shift cannot be deleted")
-    }
+    // if (shift.status === ShiftStatus.PUBLISHED) {
+    //   throw new HttpError(400, "Published shift cannot be deleted")
+    // }
     return shiftRepository.deleteById(id);
   } else {
     id.map(async (entry) => {
       let shift: Shift = await findById(entry);
-      if (shift.status === ShiftStatus.PUBLISHED) {
-        throw new HttpError(400, "Published shift cannot be deleted")
-      }
+      // if (shift.status === ShiftStatus.PUBLISHED) {
+      //   throw new HttpError(400, "Published shift cannot be deleted")
+      // }
     });
   }
 
