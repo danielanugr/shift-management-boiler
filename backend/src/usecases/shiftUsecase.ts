@@ -1,5 +1,5 @@
 import * as shiftRepository from "../database/default/repository/shiftRepository";
-import { FindManyOptions, FindOneOptions } from "typeorm";
+import { FindConditions, FindManyOptions, FindOneOptions, Not } from "typeorm";
 import Shift from "../database/default/entity/shift";
 import { ICreateShift, IUpdateShift, WeekStatus } from "../shared/interfaces";
 import { HttpError } from "../shared/classes/HttpError";
@@ -68,7 +68,7 @@ export const updateById = async (
     throw new HttpError(400, "Published shift cannot be updated");
   }
 
-  let isOverlapping = await checkOverlappingShift(shift);
+  let isOverlapping = await checkOverlappingShift(payload, id);
 
   if (isOverlapping) {
     throw new HttpError(400, "Shift is overlapping");
@@ -88,14 +88,14 @@ export const deleteById = async (id: string | string[]) => {
     }
 
     if (shift.week.status === WeekStatus.PUBLISHED) {
-      throw new HttpError(400, "Published shift cannot be updated");
+      throw new HttpError(400, "Published shift cannot deleted");
     }
     return shiftRepository.deleteById(id);
   } else {
     id.map(async (entry) => {
       let shift: Shift = await findById(entry);
       if (shift.week.status === WeekStatus.PUBLISHED) {
-        throw new HttpError(400, "Published shift cannot be updated");
+        throw new HttpError(400, "Published shift cannot be deleted");
       }
     });
   }
@@ -104,13 +104,30 @@ export const deleteById = async (id: string | string[]) => {
 };
 
 export const checkOverlappingShift = async (
-  shift: Shift | ICreateShift
+  shift: Shift | ICreateShift | IUpdateShift,
+  id?: string
 ): Promise<Boolean> => {
+
+  let where: FindConditions<Shift> = {
+    date: shift.date,
+  }
+  if (id) {
+    where.id = Not(id)
+  }
   const todayShifts = await find({
-    where: {
-      date: shift.date,
-    },
+    where
   });
+  const timeRegex = /([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]?/;
+  const startTimeCheck = timeRegex.test(shift.startTime);
+  const endTimeCheck = timeRegex.test(shift.endTime);
+
+  if(!startTimeCheck) {
+    shift.startTime += ":00"
+  }
+  
+  if(!endTimeCheck) {
+    shift.endTime += ":00"
+  }
 
   for (let i = 0; i < todayShifts.length; i++) {
     let startTimeOverlap =
@@ -120,6 +137,7 @@ export const checkOverlappingShift = async (
       shift.endTime > todayShifts[i].startTime &&
       shift.endTime < todayShifts[i].endTime;
 
+    console.log({startTimeOverlap, endTimeOverlap})
     if (startTimeOverlap || endTimeOverlap) {
       return true;
     }

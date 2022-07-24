@@ -15,6 +15,7 @@ import { useHistory } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Alert from "@material-ui/lab/Alert";
 import { Link as RouterLink } from "react-router-dom";
+import { calculateWeek, getWeekRange } from "../helper/calendar";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -32,10 +33,12 @@ const useStyles = makeStyles((theme) => ({
 interface ActionButtonProps {
   id: string;
   onDelete: () => void;
+  disabled: boolean; 
 }
 const ActionButton: FunctionComponent<ActionButtonProps> = ({
   id,
   onDelete,
+  disabled
 }) => {
   return (
     <div>
@@ -44,10 +47,11 @@ const ActionButton: FunctionComponent<ActionButtonProps> = ({
         aria-label="delete"
         component={RouterLink}
         to={`/shift/${id}/edit`}
+        disabled={disabled}
       >
         <EditIcon fontSize="small" />
       </IconButton>
-      <IconButton size="small" aria-label="delete" onClick={() => onDelete()}>
+      <IconButton size="small" aria-label="delete" onClick={() => onDelete()} disabled={disabled}>
         <DeleteIcon fontSize="small" />
       </IconButton>
     </div>
@@ -65,6 +69,10 @@ const Shift = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+
+  const [currentWeek, setCurrentWeek] = useState<number>();
+  const [startDate, setStartDate] = useState<string>();
+  const [endDate, setEndDate] = useState<string>();
 
   const onDeleteClick = (id: string) => {
     setSelectedId(id);
@@ -94,6 +102,15 @@ const Shift = () => {
     getData();
   }, []);
 
+  useEffect(() => {
+    let currentDate = new Date()
+    const week = calculateWeek(currentDate);
+    const [firstDay, lastDay] = getWeekRange(currentDate);
+    setCurrentWeek(week);
+    setStartDate(firstDay);
+    setEndDate(lastDay);
+  }, [])
+
   const columns = [
     {
       name: "Name",
@@ -118,7 +135,7 @@ const Shift = () => {
     {
       name: "Actions",
       cell: (row: any) => (
-        <ActionButton id={row.id} onDelete={() => onDeleteClick(row.id)} />
+        <ActionButton id={row.id} onDelete={() => onDeleteClick(row.id)} disabled={row.week.status === "draft" ? false : true} />
       ),
     },
   ];
@@ -154,13 +171,15 @@ const Shift = () => {
       <Grid item xs={12}>
         <Card className={classes.root}>
           <CardContent>
+            <p>
+              {`${startDate} - ${endDate}`}
+            </p>
             {errMsg.length > 0 ? (
               <Alert severity="error">{errMsg}</Alert>
             ) : (
               <></>
             )}
             <DataTable
-              title="Shifts"
               columns={columns}
               data={rows}
               pagination
