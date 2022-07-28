@@ -11,6 +11,9 @@ export default class Week extends BaseTimestamp {
   @Column()
   week: number;
 
+  @Column()
+  year: number;
+
   @Column({
     type: "date",
   })

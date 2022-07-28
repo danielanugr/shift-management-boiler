@@ -14,7 +14,14 @@ export const find = async (req: Request, h: ResponseToolkit) => {
   logger.info("Find shifts");
   try {
     const filter = req.query;
-    const data = await shiftUsecase.find(filter);
+    console.log(filter);
+    const data = await shiftUsecase.findByWeekAndYear(
+      {
+        week: filter.where.week,
+        year: filter.where.year,
+      },
+      filter
+    );
     const res: ISuccessResponse = {
       statusCode: 200,
       message: "Get shift successful",
@@ -22,7 +29,7 @@ export const find = async (req: Request, h: ResponseToolkit) => {
     };
     return res;
   } catch (error) {
-    logger.error(error.message)
+    logger.error(error.message);
     return errorHandler(h, error);
   }
 };
@@ -39,7 +46,7 @@ export const findById = async (req: Request, h: ResponseToolkit) => {
     };
     return res;
   } catch (error) {
-    logger.error(error.message)
+    logger.error(error.message);
     return errorHandler(h, error);
   }
 };
@@ -56,7 +63,7 @@ export const create = async (req: Request, h: ResponseToolkit) => {
     };
     return res;
   } catch (error) {
-    logger.error(error.message)
+    logger.error(error.message);
     return errorHandler(h, error);
   }
 };
@@ -75,7 +82,7 @@ export const updateById = async (req: Request, h: ResponseToolkit) => {
     };
     return res;
   } catch (error) {
-    logger.error(error.message)
+    logger.error(error.message);
     return errorHandler(h, error);
   }
 };
@@ -92,7 +99,7 @@ export const deleteById = async (req: Request, h: ResponseToolkit) => {
     };
     return res;
   } catch (error) {
-    logger.error(error.message)
+    logger.error(error.message);
     return errorHandler(h, error);
   }
 };

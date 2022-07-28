@@ -21,6 +21,16 @@ export const find = async (opts?: FindManyOptions<Week>): Promise<Week[]> => {
   return data;
 };
 
+export const findByWeekAndYear = async (
+  where: FindConditions<Week>,
+  opts?: FindOneOptions<Week>
+): Promise<Week> => {
+  logger.info("Find By week number and year");
+  const repository = getRepository(Week);
+  const data = await repository.findOne(where, opts);
+  return data;
+};
+
 export const findById = async (
   id: string,
   opts?: FindOneOptions<Week>

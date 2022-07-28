@@ -7,10 +7,11 @@ import moduleLogger from "../../../shared/functions/logger";
 const logger = moduleLogger("weekController");
 
 export const find = async (req: Request, h: ResponseToolkit) => {
-  logger.info("Find weeks");
+  logger.info("Find shift by weeks");
   try {
     const filter = req.query;
-    const data = await weekUsecase.find(filter);
+    const { where } = filter;
+    const data = await weekUsecase.findByWeekAndYear(where);
     const res: ISuccessResponse = {
       statusCode: 200,
       message: "Get week successful",
@@ -32,10 +33,10 @@ export const publish = async (req: Request, h: ResponseToolkit) => {
       statusCode: 200,
       message: "Week publish Successful",
       results: data,
-    }
+    };
     return res;
   } catch (err) {
     logger.error(err.message);
     return errorHandler(h, err);
   }
-}
+};

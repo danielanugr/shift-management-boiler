@@ -6,7 +6,15 @@ import moment from "moment";
 import { HttpError } from "../shared/classes/HttpError";
 
 export const find = async (opts: FindManyOptions<Week>): Promise<Week[]> => {
+  console.log(opts);
+
   return weekRepository.find(opts);
+};
+
+export const findByWeekAndYear = (
+  where: FindConditions<Week>
+): Promise<Week> => {
+  return weekRepository.findByWeekAndYear(where);
 };
 
 export const findById = async (
@@ -28,6 +36,7 @@ export const create = async (payload: ICreateWeek): Promise<Week> => {
   week.week = payload.week;
   week.startDate = payload.startDate;
   week.endDate = payload.endDate;
+  week.year = payload.year;
 
   return weekRepository.create(week);
 };
@@ -38,8 +47,7 @@ export const publishWeek = async (id: string) => {
     throw new HttpError(404, "Week not found");
   }
 
-  week.status = WeekStatus.PUBLISHED;
-  return await weekRepository.updateById(id, week);
+  return await weekRepository.updateById(id, { status: WeekStatus.PUBLISHED });
 };
 
 export const getWeekRange = (date: string) => {

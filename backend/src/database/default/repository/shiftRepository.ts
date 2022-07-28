@@ -14,7 +14,7 @@ const logger = moduleLogger("shiftRepository");
 export const find = async (opts?: FindManyOptions<Shift>): Promise<Shift[]> => {
   logger.info("Find");
   const repository = getRepository(Shift);
-  const data = await repository.find({...opts, relations: ["week"]});
+  const data = await repository.find({ ...opts, relations: ["week"] });
   return data;
 };
 
@@ -24,7 +24,7 @@ export const findById = async (
 ): Promise<Shift> => {
   logger.info("Find by id");
   const repository = getRepository(Shift);
-  const data = await repository.findOne(id, {...opts, relations: ["week"]});
+  const data = await repository.findOne(id, { ...opts, relations: ["week"] });
   return data;
 };
 
