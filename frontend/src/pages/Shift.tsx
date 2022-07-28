@@ -1,12 +1,8 @@
 import React, { FunctionComponent, useEffect, useState } from "react";
-import Grid from "@material-ui/core/Grid";
-import Card from "@material-ui/core/Card";
-import CardContent from "@material-ui/core/CardContent";
 import { makeStyles } from "@material-ui/core/styles";
 import { getErrorMessage } from "../helper/error/index";
 import { deleteShiftById, getShifts } from "../helper/api/shift";
 import DataTable from "react-data-table-component";
-import IconButton from "@material-ui/core/IconButton";
 import DeleteIcon from "@material-ui/icons/Delete";
 import EditIcon from "@material-ui/icons/Edit";
 import Fab from "@material-ui/core/Fab";
@@ -15,7 +11,20 @@ import { useHistory } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Alert from "@material-ui/lab/Alert";
 import { Link as RouterLink } from "react-router-dom";
-import { calculateWeek, getWeekRange } from "../helper/calendar";
+import { calculateWeekAndYear, getWeekRange } from "../helper/calendar";
+import {
+  Button,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  IconButton,
+} from "@material-ui/core";
+import Box from "@material-ui/core/Box";
+import { ChevronLeft, ChevronRight } from "@material-ui/icons";
+import { publishWeek } from "../helper/api/week";
+import { IWeek } from "../interfaces";
+import { format } from "date-fns/esm";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -25,20 +34,20 @@ const useStyles = makeStyles((theme) => ({
     position: "absolute",
     bottom: 40,
     right: 40,
-    backgroundColor: 'white',
-    color: theme.color.turquoise
+    backgroundColor: "white",
+    color: theme.color.turquoise,
   },
 }));
 
 interface ActionButtonProps {
   id: string;
   onDelete: () => void;
-  disabled: boolean; 
+  disabled: boolean;
 }
 const ActionButton: FunctionComponent<ActionButtonProps> = ({
   id,
   onDelete,
-  disabled
+  disabled,
 }) => {
   return (
     <div>
@@ -51,7 +60,12 @@ const ActionButton: FunctionComponent<ActionButtonProps> = ({
       >
         <EditIcon fontSize="small" />
       </IconButton>
-      <IconButton size="small" aria-label="delete" onClick={() => onDelete()} disabled={disabled}>
+      <IconButton
+        size="small"
+        aria-label="delete"
+        onClick={() => onDelete()}
+        disabled={disabled}
+      >
         <DeleteIcon fontSize="small" />
       </IconButton>
     </div>
@@ -71,8 +85,12 @@ const Shift = () => {
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
 
   const [currentWeek, setCurrentWeek] = useState<number>();
+  const [currentYear, setCurrentYear] = useState<number>();
   const [startDate, setStartDate] = useState<string>();
   const [endDate, setEndDate] = useState<string>();
+  const [weekData, setWeekData] = useState<IWeek>();
+  const [published, setPublished] = useState(false);
+  const [publishedDate, setPublishedDate] = useState<string>("");
 
   const onDeleteClick = (id: string) => {
     setSelectedId(id);
@@ -87,10 +105,29 @@ const Shift = () => {
   useEffect(() => {
     const getData = async () => {
       try {
+        let currentDate = new Date();
+        const [week, year] = calculateWeekAndYear(currentDate);
+        const [firstDay, lastDay] = getWeekRange(currentDate);
+        setCurrentWeek(week);
+        setCurrentYear(year);
+        setStartDate(firstDay);
+        setEndDate(lastDay);
         setIsLoading(true);
         setErrMsg("");
-        const { results } = await getShifts();
-        setRows(results);
+        if (currentWeek && currentYear) {
+          const { results } = await getShifts(currentWeek, currentYear);
+          if (results.length > 0) {
+            setWeekData(results[0].week);
+            if (results[0].week.status === "published") {
+              setPublished(true);
+              let publishedDate = formatPublishedDate(
+                results[0].week.updatedAt
+              );
+              setPublishedDate(publishedDate);
+            }
+          }
+          setRows(results);
+        }
       } catch (error) {
         const message = getErrorMessage(error);
         setErrMsg(message);
@@ -100,16 +137,7 @@ const Shift = () => {
     };
 
     getData();
-  }, []);
-
-  useEffect(() => {
-    let currentDate = new Date()
-    const week = calculateWeek(currentDate);
-    const [firstDay, lastDay] = getWeekRange(currentDate);
-    setCurrentWeek(week);
-    setStartDate(firstDay);
-    setEndDate(lastDay);
-  }, [])
+  }, [currentWeek, currentYear]);
 
   const columns = [
     {
@@ -135,10 +163,19 @@ const Shift = () => {
     {
       name: "Actions",
       cell: (row: any) => (
-        <ActionButton id={row.id} onDelete={() => onDeleteClick(row.id)} disabled={row.week.status === "draft" ? false : true} />
+        <ActionButton
+          id={row.id}
+          onDelete={() => onDeleteClick(row.id)}
+          disabled={row.week.status === "draft" ? false : true}
+        />
       ),
     },
   ];
+
+  const formatPublishedDate = (timestamp: string) => {
+    let date = new Date(timestamp);
+    return format(date, "dd MMM yyyy, HH:mm");
+  };
 
   const deleteDataById = async () => {
     try {
@@ -148,8 +185,6 @@ const Shift = () => {
       if (selectedId === null) {
         throw new Error("ID is null");
       }
-
-      console.log(deleteDataById);
 
       await deleteShiftById(selectedId);
 
@@ -166,15 +201,65 @@ const Shift = () => {
     }
   };
 
+  const handlePublishWeek = async () => {
+    try {
+      if (weekData) {
+        await publishWeek(weekData.id);
+        setPublished(true);
+      }
+      if (currentWeek && currentYear) {
+        const { results } = await getShifts(currentWeek, currentYear);
+        if (results.length > 0) {
+          setWeekData(results[0].week.id);
+        }
+        setRows(results);
+      }
+    } catch (error) {
+      const message = getErrorMessage(error);
+      setErrMsg(message);
+    }
+  };
+
   return (
     <Grid container spacing={3}>
       <Grid item xs={12}>
         <Card className={classes.root}>
           <CardContent>
-            <p>
-              {`${startDate} - ${endDate}`}
-            </p>
-            {errMsg.length > 0 ? (
+            <Box display="flex" justifyContent="space-between">
+              <Box display="flex" alignItems="center" flexGrow="1">
+                <Button>
+                  <ChevronLeft />
+                </Button>
+                <Typography component="h3">{`${startDate} - ${endDate}`}</Typography>
+                <Button>
+                  <ChevronRight />
+                </Button>
+              </Box>
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="flex-end"
+                flexGrow="1"
+              >
+                {published && (
+                  <Typography
+                    component="p"
+                    variant="inherit"
+                    style={{ marginRight: "1em" }}
+                  >
+                    Published at {publishedDate}
+                  </Typography>
+                )}
+                <Button
+                  variant="outlined"
+                  onClick={handlePublishWeek}
+                  disabled={rows.length === 0 || published ? true : false}
+                >
+                  Submit
+                </Button>
+              </Box>
+            </Box>
+            {errMsg?.length > 0 ? (
               <Alert severity="error">{errMsg}</Alert>
             ) : (
               <></>

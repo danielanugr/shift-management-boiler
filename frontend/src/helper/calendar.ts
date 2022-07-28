@@ -1,7 +1,10 @@
-import { startOfISOWeek, endOfISOWeek, getISOWeek, format }from "date-fns"
+import { startOfISOWeek, endOfISOWeek, getISOWeek, format, getYear }from "date-fns"
 
-export const calculateWeek = (date: Date): number => {
-  return getISOWeek(date)
+export const calculateWeekAndYear = (date: Date): number[] => {
+  let week = getISOWeek(date)
+  let year = getYear(date)
+
+  return [week, year]
 }
 
 export const getWeekRange = (date: Date): string[] => {

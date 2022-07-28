@@ -1,8 +1,8 @@
 import { getAxiosInstance } from ".";
 
-export const getShifts = async () => {
+export const getShifts = async (week: number, year: number) => {
   const api = getAxiosInstance()
-  const { data } = await api.get("/shifts?order[date]=DESC&order[startTime]=ASC");
+  const { data } = await api.get(`/shifts?order[date]=DESC&order[startTime]=ASC&where[week]=${week}&where[year]=${year}`);
   return data;
 };
 
