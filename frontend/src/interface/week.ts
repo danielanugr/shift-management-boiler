@@ -8,3 +8,10 @@ export interface IWeek {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface WeekDataResult {
+  newStartDate: string;
+  newEndDate: string;
+  week: number;
+  year: number
+}

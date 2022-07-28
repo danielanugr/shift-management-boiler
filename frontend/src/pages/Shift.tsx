@@ -11,7 +11,12 @@ import { useHistory } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Alert from "@material-ui/lab/Alert";
 import { Link as RouterLink } from "react-router-dom";
-import { calculateWeekAndYear, getWeekRange } from "../helper/calendar";
+import {
+  calculateWeekAndYear,
+  getWeekRange,
+  getNextWeek,
+  getLastWeek,
+} from "../helper/calendar";
 import {
   Button,
   Typography,
@@ -23,7 +28,7 @@ import {
 import Box from "@material-ui/core/Box";
 import { ChevronLeft, ChevronRight } from "@material-ui/icons";
 import { publishWeek } from "../helper/api/week";
-import { IWeek } from "../interfaces";
+import { IWeek, WeekDataResult } from "../interface";
 import { format } from "date-fns/esm";
 
 const useStyles = makeStyles((theme) => ({
@@ -37,6 +42,13 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: "white",
     color: theme.color.turquoise,
   },
+  pTypography: {
+    marginRight: "1em",
+    color: "red"
+  },
+  chevron: {
+    
+  }
 }));
 
 interface ActionButtonProps {
@@ -84,8 +96,10 @@ const Shift = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
 
-  const [currentWeek, setCurrentWeek] = useState<number>();
-  const [currentYear, setCurrentYear] = useState<number>();
+  const [weekAndYear, setWeekAndYear] = useState<{
+    week: number;
+    year: number;
+  }>();
   const [startDate, setStartDate] = useState<string>();
   const [endDate, setEndDate] = useState<string>();
   const [weekData, setWeekData] = useState<IWeek>();
@@ -103,19 +117,27 @@ const Shift = () => {
   };
 
   useEffect(() => {
+    let currentDate = new Date();
+    const [week, year] = calculateWeekAndYear(currentDate);
+    const [firstDay, lastDay] = getWeekRange(currentDate);
+    setWeekAndYear({ week, year });
+    setStartDate(firstDay);
+    setEndDate(lastDay);
+  }, []);
+
+  useEffect(() => {
+    let previous = history.location
+    console.log(previous);
     const getData = async () => {
       try {
-        let currentDate = new Date();
-        const [week, year] = calculateWeekAndYear(currentDate);
-        const [firstDay, lastDay] = getWeekRange(currentDate);
-        setCurrentWeek(week);
-        setCurrentYear(year);
-        setStartDate(firstDay);
-        setEndDate(lastDay);
         setIsLoading(true);
         setErrMsg("");
-        if (currentWeek && currentYear) {
-          const { results } = await getShifts(currentWeek, currentYear);
+        setPublished(false);
+        if (weekAndYear) {
+          const { results } = await getShifts(
+            weekAndYear.week,
+            weekAndYear.year
+          );
           if (results.length > 0) {
             setWeekData(results[0].week);
             if (results[0].week.status === "published") {
@@ -137,7 +159,7 @@ const Shift = () => {
     };
 
     getData();
-  }, [currentWeek, currentYear]);
+  }, [weekAndYear]);
 
   const columns = [
     {
@@ -201,14 +223,28 @@ const Shift = () => {
     }
   };
 
+  const calendarNavigate = (action: string) => {
+    let newDate: WeekDataResult;
+    let timestamp = new Date(startDate as string).setFullYear(weekAndYear?.year as number)
+    if (action === "next") {
+      newDate = getNextWeek(timestamp);
+    } else {
+      newDate = getLastWeek(timestamp);
+    }
+    let { newStartDate, newEndDate, week, year } = newDate;
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+    setWeekAndYear({ week, year });
+  };
+
   const handlePublishWeek = async () => {
     try {
       if (weekData) {
         await publishWeek(weekData.id);
         setPublished(true);
       }
-      if (currentWeek && currentYear) {
-        const { results } = await getShifts(currentWeek, currentYear);
+      if (weekAndYear) {
+        const { results } = await getShifts(weekAndYear.week, weekAndYear.year);
         if (results.length > 0) {
           setWeekData(results[0].week.id);
         }
@@ -227,11 +263,11 @@ const Shift = () => {
           <CardContent>
             <Box display="flex" justifyContent="space-between">
               <Box display="flex" alignItems="center" flexGrow="1">
-                <Button>
+                <Button onClick={() => calendarNavigate("prev")}>
                   <ChevronLeft />
                 </Button>
                 <Typography component="h3">{`${startDate} - ${endDate}`}</Typography>
-                <Button>
+                <Button onClick={() => calendarNavigate("next")}>
                   <ChevronRight />
                 </Button>
               </Box>
@@ -245,7 +281,7 @@ const Shift = () => {
                   <Typography
                     component="p"
                     variant="inherit"
-                    style={{ marginRight: "1em" }}
+                    className={classes.pTypography}
                   >
                     Published at {publishedDate}
                   </Typography>
@@ -254,6 +290,7 @@ const Shift = () => {
                   variant="outlined"
                   onClick={handlePublishWeek}
                   disabled={rows.length === 0 || published ? true : false}
+                  color="primary"
                 >
                   Submit
                 </Button>
